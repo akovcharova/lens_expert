@@ -1,0 +1,7 @@
+# avoid large files
+data/*
+!data/Urban_Forestry_Street_Trees-shp.zip
+
+# Misc.
+.DS_Store
+.ipynb_checkpoints/
