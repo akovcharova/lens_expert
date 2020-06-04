@@ -20,8 +20,8 @@ specs = [
   'max_format_size_ff',         # bool is Full Frame
   'max_format_size_apsc',       # bool is APS-C
   'max_format_size_u43',        # bool is Micro 4/3rds
-  'focal_length_min',           # int  --> consider: transform to FF equivalent based on max_format_size for model 
-  'focal_length_max',           # int
+  'focal_length_min',           # float  --> consider: transform to FF equivalent based on max_format_size for model 
+  'focal_length_max',           # float
   'image_stabilization',        # bool yes/no
   'cipa_image_stabilization_rating', # float, -1 if none
   # 'lens_mount',                 # 
@@ -67,9 +67,7 @@ specs = [
   # 'notes',
 ]
 
-#  TODO - data types
-# df = pd.DataFrame(columns=specs)
-
+df_rows = []
 for ifile, file in enumerate(files):
   print(f'---> Processing file {ifile}: {file}')
   dict_ = OrderedDict(zip(specs, [None]*len(specs)))
@@ -79,17 +77,20 @@ for ifile, file in enumerate(files):
     dict_['lens_id'] = dict_['lens_id'].replace('oly_','olympus_')
   
   dict_['brand'] = dict_['lens_id'].split('_')[0]
+  if ('lensbaby' in dict_['brand']) or ('holga' in dict_['brand']): # nonsense
+    continue
   
   # parse general info
   bs = BeautifulSoup(open(file).read(), 'html.parser')
   dict_['original_price'] = -1
   price_tag = bs.find('div',{'class':'price single'})
-  if not price_tag: 
+  if price_tag is None: 
     price_range = bs.find('div',{'class':'price range'})
-    price_tags = price_range.find_all('span')
-    min_ = price_tags[0].contents[0].lower().strip().strip('$').replace(',','')
-    max_ = price_tags[2].contents[0].lower().strip().strip('$').replace(',','')
-    dict_['original_price'] = (float(max_) + float(min_))/2
+    if price_range is not None:
+      price_tags = price_range.find_all('span')
+      min_ = price_tags[0].contents[0].lower().strip().strip('$').replace(',','')
+      max_ = price_tags[2].contents[0].lower().strip().strip('$').replace(',','')
+      dict_['original_price'] = (float(max_) + float(min_))/2
   else:
     price = price_tag.contents[0].lower().strip().strip('$').replace(',','')
     if 'check' not in price and 'see' not in price: # some lenses just have a link to 'Check prices'... consider later
@@ -117,9 +118,9 @@ for ifile, file in enumerate(files):
     elif lbl == "focal_length":
       val = val.replace('-','--').replace('–','--')
       if '--' in val:
-        val_min, val_max = int(val.split('--')[0]), int(val.split('--')[1])
+        val_min, val_max = float(val.split('--')[0]), float(val.split('--')[1])
       else:
-        val_min, val_max = int(val), -1
+        val_min, val_max = float(val), -1
       dict_[lbl+'_min'], dict_[lbl+'_max'] = val_min, val_max
     elif (lbl == "maximum_aperture") or (lbl == "minimum_aperture"):
       val = val.replace('f','').replace('-','--').replace('–','--')
@@ -137,8 +138,9 @@ for ifile, file in enumerate(files):
         dict_['max_format_size_ff'] = True if 'ff' in val else False
         dict_['max_format_size_apsc'] = True if 'aps-c' in val else False
         dict_['max_format_size_u43'] = True if 'fourthirds' in val else False
-      else: 
-        print(f'ERROR:: Unknown {lbl} with value {val} found for {lens_id}.')
+      else:
+        continue # don't care about medium format 
+        # print(f"ERROR:: Unknown {lbl} with value {val} found for {dict_['lens_id']}.")
     elif lbl in ['cipa_image_stabilization_rating','minimum_focus','maximum_magnification']:
       dict_[lbl] = float(val)
     elif lbl in ['groups','elements','weight','diameter','length']:
@@ -147,10 +149,13 @@ for ifile, file in enumerate(files):
       continue # ignoring some minor specs
       # print(f"ERROR:: Unknown label {lbl} found for {dict_['lens_id']}.")
 
+  df_rows.append(dict_)
   if debug: 
     pprint.pprint(dict_)
 
-
+df = pd.DataFrame(df_rows)
+df.to_csv('lens_specs.csv')
+print('Wrote lens_specs.csv')
 
 
 
