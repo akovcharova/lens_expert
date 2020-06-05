@@ -1,10 +1,11 @@
 #! /usr/bin/env python3
-import os, time, glob, pprint, csv
+import os, time, glob, pprint, csv, math
 from bs4 import BeautifulSoup
 from collections import OrderedDict
 import pandas as pd
 
 debug = False
+do_subset = True
 
 files = glob.glob(os.environ.get('RAW_HTML')+'/specs/*info.html')
 print(f'Found {len(files)} files')
@@ -16,21 +17,21 @@ specs = [
   'original_price',             # float if N/A, exclude lens
   'announce_date',              # just year (consider: months)
   # ---- Principal specs ---- 
-  'is_zoom',                    # bool lens_type = zoom/prime --> true/false
-  'max_format_size_ff',         # bool is Full Frame
-  'max_format_size_apsc',       # bool is APS-C
-  'max_format_size_u43',        # bool is Micro 4/3rds
-  'focal_length_min',           # float  --> consider: transform to FF equivalent based on max_format_size for model 
-  'focal_length_max',           # float
+  # 'lens_type',                # bool lens_type = zoom/prime --> already clear from the focal length
+  'is_ff',                      # bool is Full Frame
+  'is_apsc',                    # bool is APS-C
+  'is_u43',                     # bool is Micro 4/3rds
+  'flen_min',                   # float  --> consider: transform to FF equivalent based on max_format_size for model 
+  'flen_max',                   # float
   'image_stabilization',        # bool yes/no
-  'cipa_image_stabilization_rating', # float, -1 if none
+  # 'cipa_image_stabilization_rating', # float, -1 if none
   # 'lens_mount',                 # 
   # ---- Aperture ---- 
-  'maximum_aperture_1',          # int
-  'maximum_aperture_2',          # int, -1 if none
-  'minimum_aperture_1',          # int
-  'minimum_aperture_2',          # int, -1 if none
-  'aperture_ring',               # bool yes/no
+  'f_min',            # int
+  # 'maximum_aperture_2',        # int, -1 if none
+  # 'minimum_aperture_1',        # int
+  # 'minimum_aperture_2',        # int, -1 if none
+  # 'aperture_ring',               # bool yes/no
   # 'aperture_notes',
   # 'number_of_diaphragm_blades',
   # ---- Optics ---- 
@@ -50,13 +51,13 @@ specs = [
   # 'focus_notes',
   # ---- Physical ---- 
   'weight',                       # int
-  'diameter',                     # int
-  'length',                       # int
+  # 'diameter',                     # int
+  # 'length',                       # int
   # 'materials',                  # consider: metal or no?
   'sealing',                      # bool
   # 'colour',
-  'internal_zoom',                  # bool: extending or not
-  'power_zoom',                   # bool
+  # 'internal_zoom',                  # bool: extending or not
+  # 'power_zoom',                   # bool
   # 'zoom_lock',                    
   # 'filter_thread',
   # 'filter_notes',
@@ -67,22 +68,24 @@ specs = [
   # 'notes',
 ]
 
+
+
 df_rows = []
 for ifile, file in enumerate(files):
   print(f'---> Processing file {ifile}: {file}')
-  dict_ = OrderedDict(zip(specs, [None]*len(specs)))
+  irow = OrderedDict(zip(specs, [None]*len(specs)))
   
-  dict_['lens_id'] = file.split('/')[-1].split('_info')[0]
-  if dict_['lens_id'][0:4] == 'oly_': # a few pages randomly have this abbreviation...
-    dict_['lens_id'] = dict_['lens_id'].replace('oly_','olympus_')
+  irow['lens_id'] = file.split('/')[-1].split('_info')[0]
+  if irow['lens_id'][0:4] == 'oly_': # a few pages randomly have this abbreviation...
+    irow['lens_id'] = irow['lens_id'].replace('oly_','olympus_')
   
-  dict_['brand'] = dict_['lens_id'].split('_')[0]
-  if ('lensbaby' in dict_['brand']) or ('holga' in dict_['brand']): # nonsense
+  irow['brand'] = irow['lens_id'].split('_')[0]
+  if ('lensbaby' in irow['brand']) or ('holga' in irow['brand']): # nonsense
     continue
   
   # parse general info
   bs = BeautifulSoup(open(file).read(), 'html.parser')
-  dict_['original_price'] = -1
+  irow['original_price'] = -1
   price_tag = bs.find('div',{'class':'price single'})
   if price_tag is None: 
     price_range = bs.find('div',{'class':'price range'})
@@ -90,18 +93,22 @@ for ifile, file in enumerate(files):
       price_tags = price_range.find_all('span')
       min_ = price_tags[0].contents[0].lower().strip().strip('$').replace(',','')
       max_ = price_tags[2].contents[0].lower().strip().strip('$').replace(',','')
-      dict_['original_price'] = (float(max_) + float(min_))/2
+      irow['original_price'] = (float(max_) + float(min_))/2
   else:
     price = price_tag.contents[0].lower().strip().strip('$').replace(',','')
     if 'check' not in price and 'see' not in price: # some lenses just have a link to 'Check prices'... consider later
-      dict_['original_price'] = float(price)
+      irow['original_price'] = float(price)
+  if do_subset and irow['original_price']<0: 
+    continue
 
   year_str = bs.find('div',{'class':'shortSpecs'})
   year_str = year_str.contents[2].strip('\n').split('\n')[0].split(',')[-1].strip()
   try:
-    dict_['announce_date'] = int(year_str)
+    irow['announce_date'] = int(year_str)
   except:
-    dict_['announce_date'] = -1
+    irow['announce_date'] = -1
+  if do_subset and irow['announce_date']<2010: 
+    continue
 
   # parse spec sheet
   bs = BeautifulSoup(open(file.replace('_info','_spec')).read(), 'html.parser')
@@ -113,48 +120,67 @@ for ifile, file in enumerate(files):
     if debug: 
       print(f'Processing label "{lbl}" with value "{val}"')
 
-    if lbl == "lens_type":
-      dict_['is_zoom'] = True if 'zoom' in val else False
-    elif lbl == "focal_length":
+    if lbl == "focal_length":
       val = val.replace('-','--').replace('–','--')
       if '--' in val:
         val_min, val_max = float(val.split('--')[0]), float(val.split('--')[1])
       else:
         val_min, val_max = float(val), -1
-      dict_[lbl+'_min'], dict_[lbl+'_max'] = val_min, val_max
-    elif (lbl == "maximum_aperture") or (lbl == "minimum_aperture"):
+      irow['flen_min'], irow['flen_max'] = val_min, val_max
+    elif (lbl == "maximum_aperture"):# or (lbl == "minimum_aperture"):
       val = val.replace('f','').replace('-','--').replace('–','--')
       if '--' in val:
-        val_1, val_2 = float(val.split('--')[0]), float(val.split('--')[1])
+        irow['f_min'] = float(val.split('--')[0])
       else:
-        val_1, val_2 = float(val), -1
-      dict_[lbl+'_1'], dict_[lbl+'_2'] = val_1, val_2
-    elif lbl in ['image_stabilization','aperture_ring','autofocus','sealing','power_zoom']:
-      dict_[lbl] = True if 'yes' in val else False
-    elif lbl == 'zoom_method':
-      dict_['internal_zoom'] = True if 'internal' in val else False
+        irow['f_min'] = float(val)
+    elif lbl in ['image_stabilization','autofocus','sealing']: # ,'power_zoom'
+      irow[lbl] = True if 'yes' in val else False
+    # elif lbl == 'zoom_method':
+    #   irow['internal_zoom'] = True if 'internal' in val else False
     elif lbl == 'max_format_size':
       if ('ff' in val) or ('aps-c' in val) or ('fourthirds' in val): 
-        dict_['max_format_size_ff'] = True if 'ff' in val else False
-        dict_['max_format_size_apsc'] = True if 'aps-c' in val else False
-        dict_['max_format_size_u43'] = True if 'fourthirds' in val else False
+        irow['is_ff'] = True if 'ff' in val else False
+        irow['is_apsc'] = True if 'aps-c' in val else False
+        irow['is_u43'] = True if 'fourthirds' in val else False
       else:
         continue # don't care about medium format 
-        # print(f"ERROR:: Unknown {lbl} with value {val} found for {dict_['lens_id']}.")
-    elif lbl in ['cipa_image_stabilization_rating','minimum_focus','maximum_magnification']:
-      dict_[lbl] = float(val)
-    elif lbl in ['groups','elements','weight','diameter','length']:
-      dict_[lbl] = int(val)
+        # print(f"ERROR:: Unknown {lbl} with value {val} found for {irow['lens_id']}.")
+    elif lbl in ['minimum_focus','maximum_magnification']: # 'cipa_image_stabilization_rating'
+      irow[lbl] = float(val)
+    elif lbl in ['groups','elements','weight']: # ,'diameter','length'
+      irow[lbl] = int(val)
     else:
       continue # ignoring some minor specs
-      # print(f"ERROR:: Unknown label {lbl} found for {dict_['lens_id']}.")
+      # print(f"ERROR:: Unknown label {lbl} found for {irow['lens_id']}.")
 
-  df_rows.append(dict_)
+  # some default values
+  if irow['image_stabilization'] is None: 
+    irow['image_stabilization'] = False
+  if irow['sealing'] is None: 
+    irow['sealing'] = False
+  if irow['autofocus'] is None: 
+    irow['autofocus'] = False
+  if irow['elements'] is None: 
+    irow['elements'] = -1
+  if irow['groups'] is None: 
+    irow['groups'] = -1
+  if irow['weight'] is None: 
+    irow['weight'] = -1
+  if irow['minimum_focus'] is None: 
+    irow['minimum_focus'] = -1
+  if irow['maximum_magnification'] is None: 
+    irow['maximum_magnification'] = -1
+
+  # is it garbage?
+  # if any((x is None) for x in irow.values()):
+  #   continue
+
+  df_rows.append(irow)
   if debug: 
-    pprint.pprint(dict_)
+    pprint.pprint(irow)
 
 df = pd.DataFrame(df_rows)
-df.to_csv('lens_specs.csv')
+df.to_csv('data/lens_specs.csv')
 print('Wrote lens_specs.csv')
 
 
