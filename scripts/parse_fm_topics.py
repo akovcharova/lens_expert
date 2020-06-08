@@ -4,6 +4,7 @@ from collections import OrderedDict
 import pandas as pd
 import os, pprint, sys
 import glob
+import psycopg2
 
 debug = False
 topic = -1
@@ -35,7 +36,15 @@ fields = [
   'announce_date'
 ]
 
-df = pd.read_csv('data/lens_specs.csv')
+sql_query = """SELECT * FROM lens_specs"""
+
+con = None
+con = psycopg2.connect(database='lens_db', user='ana', host='localhost', password='nonsense')
+df = pd.read_sql_query(sql_query,con)
+print(df.head())
+
+sys.exit(0)
+
 brands = df['brand'].unique()
 
 def match(ref, i):
@@ -44,17 +53,14 @@ def match(ref, i):
 def get_str(ival):
   return str(int(ival) if ival%1==0 else float(ival))
 
-def save_lens(slim_df, ilens, flen_min, flen_max, f_min):
+def save_lens(slim_df, ilens):
   irow['lens_id'] = slim_df['lens_id'].iloc[ilens]
   irow['brand'] = slim_df['brand'].iloc[ilens]
   irow['original_price'] = slim_df['original_price'].iloc[ilens]
   irow['announce_date'] = slim_df['announce_date'].iloc[ilens]
-  # irow['flen_max_true'] = slim_df['flen_max'].iloc[ilens]
-  # irow['flen_min_true'] = slim_df['flen_min'].iloc[ilens]
-  # irow['f_min_true'] = slim_df['f_min'].iloc[ilens]
-  irow['flen_max'] = flen_max
-  irow['flen_min'] = flen_min
-  irow['f_min'] = f_min
+  irow['flen_max'] = slim_df['flen_max'].iloc[ilens]
+  irow['flen_min'] = slim_df['flen_min'].iloc[ilens]
+  irow['f_min'] = slim_df['f_min'].iloc[ilens]
   return
 
 # see notebooks/specs_eda.ipynb for details
@@ -165,7 +171,7 @@ for ifile, file in enumerate(files):
         continue
       elif len(matches)==1:
         ilens = matches[0]
-        save_lens(slim_df, ilens, slim_df['flen_min'].iloc[ilens], slim_df['flen_max'].iloc[ilens], slim_df['f_min'].iloc[ilens])
+        save_lens(slim_df, ilens)
       else:
         fmatches = []
         for ilens in matches:
@@ -179,13 +185,13 @@ for ifile, file in enumerate(files):
           if slim_df['lens_id'].iloc[ilens] in has_indistinguishable_sibling:
             continue
           else:
-            save_lens(slim_df, ilens, slim_df['flen_min'].iloc[ilens], slim_df['flen_max'].iloc[ilens], slim_df['f_min'].iloc[ilens])
+            save_lens(slim_df, ilens)
         else: # save even if only matched focal length and not aperture
           ilens = matches[0]
           if slim_df['lens_id'].iloc[ilens] in has_indistinguishable_sibling:
             continue
           else:
-            save_lens(slim_df, ilens, slim_df['flen_min'].iloc[ilens], slim_df['flen_max'].iloc[ilens], slim_df['f_min'].iloc[ilens])
+            save_lens(slim_df, ilens)
 
       # Span 3: Payment method -> skip
       # Span 4: Condition -> not mandatory, since probably all are very good or like new

@@ -40,7 +40,6 @@ if __name__ == "__main__":
   cprint('Correlation coeffficients:','blue')
   print(corr_matrix['price'].sort_values(ascending=False))
 
-  # clean up one really bad:
   sales['ret_value'] = sales['price']/sales['original_price']
   cprint(f'Mean price/orig_price: {sales.ret_value.mean()}','blue')
   cprint(f'Std price/orig_price: {sales.ret_value.std()}','blue')
