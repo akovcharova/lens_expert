@@ -4,6 +4,21 @@ from bs4 import BeautifulSoup
 from collections import OrderedDict
 import pandas as pd
 
+from sqlalchemy import create_engine
+from sqlalchemy_utils import database_exists, create_database
+import psycopg2
+
+# -----------  Setting up database
+dbname, username = 'lens_db', 'ana'
+engine = create_engine(f'postgresql://{username}:nonsense@localhost/{dbname}')
+print(f'Created engine: {engine.url}')
+if database_exists(engine.url):
+  print(f'Database {dbname} found.')
+else:
+  print(f'Database {dbname} not found. Creating database...',)
+  create_database(engine.url)
+  print('Done.')
+
 debug = False
 do_subset = True
 
@@ -182,6 +197,9 @@ for ifile, file in enumerate(files):
 df = pd.DataFrame(df_rows)
 df.to_csv('data/lens_specs.csv')
 print('Wrote lens_specs.csv')
+
+df.to_sql('lens_specs', engine, if_exists='replace')
+print('Created lens_db.')
 
 
 
