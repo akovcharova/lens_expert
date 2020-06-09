@@ -43,8 +43,6 @@ con = psycopg2.connect(database='lens_db', user='ana', host='localhost', passwor
 df = pd.read_sql_query(sql_query,con)
 print(df.head())
 
-sys.exit(0)
-
 brands = df['brand'].unique()
 
 def match(ref, i):
@@ -219,7 +217,7 @@ for ifile, file in enumerate(files):
 
 
 df = pd.DataFrame(df_rows)
-df.to_csv('data/sales.csv')
+df.to_csv('data/sales.csv', index=False)
 print(f'Wrote {len(df_rows)} rows to sales.csv')
       
 

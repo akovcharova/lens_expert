@@ -33,7 +33,7 @@ specs = [
   'announce_date',              # just year (consider: months)
   # ---- Principal specs ---- 
   # 'lens_type',                # bool lens_type = zoom/prime --> already clear from the focal length
-  'is_ff',                      # bool is Full Frame
+  'format',                      # bool is Full Frame
   'is_apsc',                    # bool is APS-C
   'is_u43',                     # bool is Micro 4/3rds
   'flen_min',                   # float  --> consider: transform to FF equivalent based on max_format_size for model 
@@ -125,6 +125,8 @@ for ifile, file in enumerate(files):
   if do_subset and irow['announce_date']<2010: 
     continue
 
+  keep = True
+
   # parse spec sheet
   bs = BeautifulSoup(open(file.replace('_info','_spec')).read(), 'html.parser')
   lbls = bs.find_all('th',{'class':'label'})
@@ -153,12 +155,14 @@ for ifile, file in enumerate(files):
     # elif lbl == 'zoom_method':
     #   irow['internal_zoom'] = True if 'internal' in val else False
     elif lbl == 'max_format_size':
-      if ('ff' in val) or ('aps-c' in val) or ('fourthirds' in val): 
-        irow['is_ff'] = True if 'ff' in val else False
-        irow['is_apsc'] = True if 'aps-c' in val else False
-        irow['is_u43'] = True if 'fourthirds' in val else False
+      if 'ff' in val:
+        irow['format'] = 2 # assign value according to crop factor
+      elif 'aps-c' in val:
+        irow['is_apsc'] = 1.33
+      elif 'fourthirds' in val:
+        irow['is_u43'] = 1
       else:
-        continue # don't care about medium format 
+        keep = False # don't care about medium format 
         # print(f"ERROR:: Unknown {lbl} with value {val} found for {irow['lens_id']}.")
     elif lbl in ['minimum_focus','maximum_magnification']: # 'cipa_image_stabilization_rating'
       irow[lbl] = float(val)
@@ -185,17 +189,20 @@ for ifile, file in enumerate(files):
     irow['minimum_focus'] = -1
   if irow['maximum_magnification'] is None: 
     irow['maximum_magnification'] = -1
+  if irow['flen_min'] is None:
+    keep = False
+  if irow['flen_max'] is None:
+    irow['flen_max'] = -1
+  if irow['f_min'] is None:
+    irow['f_min'] = -1
 
-  # is it garbage?
-  # if any((x is None) for x in irow.values()):
-  #   continue
-
-  df_rows.append(irow)
+  if keep:
+    df_rows.append(irow)
   if debug: 
     pprint.pprint(irow)
 
 df = pd.DataFrame(df_rows)
-df.to_csv('data/lens_specs.csv')
+df.to_csv('data/lens_specs.csv', index=False)
 print('Wrote lens_specs.csv')
 
 df.to_sql('lens_specs', engine, if_exists='replace')
