@@ -56,8 +56,8 @@ if __name__ == "__main__":
   cat_attr = ['brand']
 
   full_pipeline = ColumnTransformer([
-    ("num", StandardScaler(), num_attr),
-    ("cat", OneHotEncoder(), cat_attr),
+    ('num', StandardScaler(), num_attr),
+    ('cat', OneHotEncoder(), cat_attr),
     ])
     # remainder='passthrough')
 
@@ -80,7 +80,7 @@ if __name__ == "__main__":
   test_rmse = np.sqrt(mean_squared_error(y_test, y_pred))
   print(f"Test RMSE = {test_rmse}")
 
-  train_set.plot(kind='scatter',x='original_price', y='price', figsize=(12, 8))
+  # train_set.plot(kind='scatter',x='original_price', y='price', figsize=(12, 8))
 
 
 

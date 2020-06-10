@@ -74,13 +74,16 @@ def get_posts_info(thread_href):
         else: 
           user = user.contents[0]
         user_nposts = bs_post.find('div',{'class':'userInfo'}).contents[-1].split('Posts:')[1].strip()
-        body = bs_post.find('div',{'class':'postBodyText hasBottomSection body'})
-        if body is None:
-          body = bs_post.find('div',{'class':'postBodyText body'})
-        if body.p is None:
+
+        body = ''
+        bs_body = bs_post.find('div',{'class':'postBodyText hasBottomSection body'})
+        if bs_body is None:
+          bs_body = bs_post.find('div',{'class':'postBodyText body'})
+        if bs_body is None:
           cprint(f'No body found in post by {user}. Skip.','red')
           continue
-        body = body.p.contents[0]
+        children = bs_body.findChildren('p',recursive=False)
+        body = ' '.join([(i.contents[0] if isinstance(i.contents[0], str) else '. ') for i in children])
         # print(date, user, user_nposts, body)
         posts.append(post(date=date, user=user, user_nposts=user_nposts, body=body))
       except Exception as e:
@@ -144,3 +147,8 @@ if __name__ == "__main__":
     cprint(f'***************** Collecting reviews for {activity} **************************','green')
     save_reviews(activity)
     time.sleep(random.uniform(0,1))
+  # title, posts = get_posts_info('https://www.dpreview.com/forums/thread/3881767')
+
+  # for post in posts:
+  #   print(post.body)
+  #   print('-'*100)
