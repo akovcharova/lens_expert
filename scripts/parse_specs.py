@@ -19,8 +19,6 @@ specs = [
   # ---- Principal specs ---- 
   # 'lens_type',                # bool lens_type = zoom/prime --> already clear from the focal length
   'format',                      # bool is Full Frame
-  'is_apsc',                    # bool is APS-C
-  'is_u43',                     # bool is Micro 4/3rds
   'flen_min',                   # float  --> consider: transform to FF equivalent based on max_format_size for model 
   'flen_max',                   # float
   'image_stabilization',        # bool yes/no
@@ -80,7 +78,7 @@ for ifile, file in enumerate(files):
     irow['lens_id'] = irow['lens_id'].replace('oly_','olympus_')
   
   irow['brand'] = irow['lens_id'].split('_')[0]
-  if ('lensbaby' in irow['brand']) or ('holga' in irow['brand']): # nonsense
+  if ('lensbaby' in irow['brand']) or ('holga' in irow['brand']) or (irow['brand']=='zeiss'): 
     continue
   
   # parse general info
@@ -110,8 +108,6 @@ for ifile, file in enumerate(files):
   if do_subset and irow['announce_date']<2010: 
     continue
 
-  keep = True
-
   # parse spec sheet
   bs = BeautifulSoup(open(file.replace('_info','_spec')).read(), 'html.parser')
   lbls = bs.find_all('th',{'class':'label'})
@@ -140,15 +136,13 @@ for ifile, file in enumerate(files):
     # elif lbl == 'zoom_method':
     #   irow['internal_zoom'] = True if 'internal' in val else False
     elif lbl == 'max_format_size':
+      irow['format'] = -1
       if 'ff' in val:
         irow['format'] = 2 # assign value according to crop factor
       elif 'aps-c' in val:
-        irow['is_apsc'] = 1.33
+        irow['format'] = 1.33
       elif 'fourthirds' in val:
-        irow['is_u43'] = 1
-      else:
-        keep = False # don't care about medium format 
-        # print(f"ERROR:: Unknown {lbl} with value {val} found for {irow['lens_id']}.")
+        irow['format'] = 1
     elif lbl in ['minimum_focus','maximum_magnification']: # 'cipa_image_stabilization_rating'
       irow[lbl] = float(val)
     elif lbl in ['groups','elements','weight']: # ,'diameter','length'
@@ -156,42 +150,66 @@ for ifile, file in enumerate(files):
     else:
       continue # ignoring some minor specs
       # print(f"ERROR:: Unknown label {lbl} found for {irow['lens_id']}.")
+  
+
+  if (irow['flen_min'] is None) or (irow['format']==-1):
+    continue
 
   # some default values
-  if irow['image_stabilization'] is None: 
-    irow['image_stabilization'] = False
-  if irow['sealing'] is None: 
-    irow['sealing'] = False
-  if irow['autofocus'] is None: 
-    irow['autofocus'] = False
-  if irow['elements'] is None: 
-    irow['elements'] = -1
-  if irow['groups'] is None: 
-    irow['groups'] = -1
-  if irow['weight'] is None: 
-    irow['weight'] = -1
-  if irow['minimum_focus'] is None: 
-    irow['minimum_focus'] = -1
-  if irow['maximum_magnification'] is None: 
-    irow['maximum_magnification'] = -1
-  if irow['flen_min'] is None:
-    keep = False
-  if irow['flen_max'] is None:
-    irow['flen_max'] = -1
-  if irow['f_min'] is None:
-    irow['f_min'] = -1
+  if irow['image_stabilization'] is None:    irow['image_stabilization'] = False
+  if irow['sealing'] is None:                irow['sealing'] = False
+  if irow['autofocus'] is None:              irow['autofocus'] = False
+  if irow['elements'] is None:               irow['elements'] = -1
+  if irow['groups'] is None:                 irow['groups'] = -1
+  if irow['weight'] is None:                 irow['weight'] = -1
+  if irow['minimum_focus'] is None:          irow['minimum_focus'] = -1
+  if irow['maximum_magnification'] is None:  irow['maximum_magnification'] = -1
+  if irow['flen_max'] is None:               irow['flen_max'] = -1
+  if irow['f_min'] is None:                  irow['f_min'] = -1
 
-  if keep:
-    df_rows.append(irow)
   if debug: 
     pprint.pprint(irow)
 
+  # check if another lens with same flen_min, flen_max and f_min already in DataFrame
+  # if yes, keep only most recent one
+  idx = -1
+  for j, jrow in enumerate(df_rows):
+    if (irow['brand']==jrow['brand']) and (irow['flen_min']==jrow['flen_min']) and (irow['flen_max']==jrow['flen_max']) and (irow['f_min']==jrow['f_min']):
+      idx = j
+
+  if idx!=-1:
+    if df_rows[idx]['announce_date'] > irow['announce_date']:
+      continue
+    else:
+      df_rows.pop(idx)
+      df_rows.append(irow)
+  else:
+    df_rows.append(irow)
+
+
 df = pd.DataFrame(df_rows)
-df.to_csv('data/lens_specs.csv', index=False)
-print('Wrote lens_specs.csv')
+df.to_csv('data/specs_clean.csv', index=False)
+print('Wrote specs_clean.csv')
 
 
+# Write to SQL DB 
+from sqlalchemy import create_engine
+from sqlalchemy_utils import database_exists, create_database
+import psycopg2
 
+# -----------  Setting up database
+dbname, username = 'lens_db', 'ana'
+engine = create_engine(f'postgresql://{username}:nonsense@localhost/{dbname}')
+print(f'Created engine: {engine.url}')
+if database_exists(engine.url):
+  print(f'Database {dbname} found.')
+else:
+  print(f'Database {dbname} not found. Creating database...',)
+  create_database(engine.url)
+  print('Done.')
+
+df.to_sql('specs_clean', engine, if_exists='replace')
+print(f'Wrote specs_clean table to {dbname}.')
 
 
 

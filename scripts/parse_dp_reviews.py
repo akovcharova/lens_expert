@@ -3,7 +3,6 @@ import utils, csv, glob, os, sys, pprint
 from termcolor import cprint
 import pandas as pd
 import psycopg2
-import spacy
 
 debug = False
 
@@ -17,27 +16,28 @@ specs = pd.read_csv('data/specs_clean.csv')
 brands = specs['brand'].unique()
 print('Considering the following brands:', brands)
 
-nlp = spacy.load('en_core_web_sm')
-
 def get_lens_id(post, brand_def):
   """
   Returns a list of tuples of lens_id and sentence in which the lens_id appeared.
   """
   lens_ids = []
-  for sent in post.sents:
-    text = sent.text.lower()
+  sentences = post.split('. ')
+  for sent in sentences:
+    text = sent.lower()
 
     # first check if a brand is mentioned, otherwise default to brand in forum title if there is such
     brand = brand_def
+    nbrands = 0
     for ibrand in brands:
       if ibrand in text:
         brand = ibrand
-    if brand=='': 
-      break
+        nbrands +=1
+    if (nbrands==0 and brand_def=='') or nbrands>1:
+      continue
 
     # Matching similar to FM forums but people refer to the lenses in more ways, so expanding on the strings to try to match
     slim_df = specs[specs['brand']==brand]
-    ilens = utils.match_lens(slim_df, text)
+    ilens = utils.match_lens(slim_df, text, debug=True)
     if (ilens!=-1):
       lens_ids.append((slim_df['lens_id'].iloc[ilens], text))
 
@@ -45,24 +45,26 @@ def get_lens_id(post, brand_def):
   return lens_ids
 
 if __name__ == "__main__":
-  activities = {'landscape','wildlife','portraits','low_light'}
+  activities = {'landscape'} #,'wildlife','portraits','low_light'}
 
   outfile = open(f'data/usage.csv','w')
   writer = csv.writer(outfile)
-  writer.writerow(('usage', 'lens_id', 'sentences'))
+  writer.writerow(('usage', 'thread', 'lens_id', 'sentences'))
 
   for activity in activities:
     cprint(f'---------------------------------- Parsing reviews for {activity} ----------------------------------','green')
     files = glob.glob(os.environ.get('RAW_HTML')+f'/dprev/{activity}_thread_*.csv')
     print(f'Found {len(files)} files.')
-    for ifile in files:
+    for i, ifile in enumerate(files):
+      thread_id = ifile.split('thread_')[-1].split('.csv')[0]
       # cols: 'thread_forum', 'thread_title', 'post_date', 'user','user_nposts','post_body'
       df_posts = pd.read_csv(ifile)
       df_posts.dropna(inplace=True)
 
-      forum = df_posts['thread_forum'].iloc[0]
+      forum = df_posts['thread_forum'].iloc[0].lower()
       if forum=='Open Talk': # these are usually not about advice
         continue
+      print('Forum title:',forum)
 
       # check for default brand name
       brand_def = ''
@@ -71,11 +73,12 @@ if __name__ == "__main__":
           brand_def = ibrand
           break
 
-      posts = list(nlp.pipe(df_posts['post_body']))
-      for post in posts:
+      for post in df_posts['post_body']:
         matches = get_lens_id(post, brand_def)
         for match in matches:
-          writer.writerow((activity, match[0], match[1]))
+          writer.writerow((activity, thread_id, match[0], match[1]))
+
+      if i>0: break
 
   outfile.close()
 

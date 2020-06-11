@@ -113,8 +113,6 @@ for ifile, file in enumerate(files):
       if 'fuji' in item:                                brand, found_brand = 'fujifilm', True
       elif 'oly' in item:                               brand, found_brand = 'olympus', True
       elif ('zeiss' in item) and ('sony' in item):      brand, found_brand = 'sony', True
-      elif ('zeiss' in item) and ('sony' not in item):  brand, found_brand = 'zeiss', True
-      elif ('loxia' in item) or ('milvus' in item):     brand, found_brand = 'zeiss', True
       elif ('rokinon' in item) and ('fuji' in item):    brand, found_brand = 'rokinon', True
       elif ('tamron' in item) and ('sony' in item):     brand, found_brand = 'tamron', True
       elif ('sigma' in item) and ('sony' in item):      brand, found_brand = 'sigma', True

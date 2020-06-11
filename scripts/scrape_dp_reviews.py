@@ -15,6 +15,8 @@ headers = {'User-Agent':'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:76.0) 
           'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'}
 session = requests.Session()
 
+debug = True
+
 def get_thread_list(bs_search_results):
   thread_list = []
   recent = True
@@ -36,7 +38,7 @@ def get_thread_list(bs_search_results):
       thread_list.append(thread(date=date, forum=forum, href=href))
   except Exception as e:
     cprint(f'Encountered exception while parsing search result to find threads. Skip.\n{e}','red')
-    raise
+    if (debug): raise
   return (recent, thread_list)
 
 def get_posts_info(thread_href):
@@ -56,13 +58,13 @@ def get_posts_info(thread_href):
         next_page_exists = False
     except Exception as e:
       cprint(f'Encountered exception while reading {ipage} page of posts. Skip.\n{e}','red')
-      raise
+      if (debug): raise
 
     try:
       bs_posts = bs_thread.find_all('div',{'class':'postBody'})
     except Exception as e:
       cprint(f'Encountered exception while parsing thread to find posts. Skip.\n{e}','red')
-      raise
+      if (debug): raise
       return posts
 
     for bs_post in bs_posts:
@@ -88,7 +90,7 @@ def get_posts_info(thread_href):
         posts.append(post(date=date, user=user, user_nposts=user_nposts, body=body))
       except Exception as e:
         cprint(f'Encountered exception while parsing post. Skip.\n{e}','red')
-        raise
+        if (debug): raise
         continue
   return thread_title, posts
 
@@ -138,7 +140,7 @@ def save_reviews(activity):
 
   except Exception as e:
     cprint(f'Encountered exception while searching for {activity}. Skip.\n{e}','red')
-    raise
+    if (debug): raise
   return
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 # avoid large files
 data/*
+__pycache__/
 !data/Urban_Forestry_Street_Trees-shp.zip
 
 # Misc.
