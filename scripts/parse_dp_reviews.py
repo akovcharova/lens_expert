@@ -37,7 +37,7 @@ def get_lens_id(post, brand_def):
 
     # Matching similar to FM forums but people refer to the lenses in more ways, so expanding on the strings to try to match
     slim_df = specs[specs['brand']==brand]
-    ilens = utils.match_lens(slim_df, text, debug=True)
+    ilens = utils.match_lens(slim_df, text, debug=False)
     if (ilens!=-1):
       lens_ids.append((slim_df['lens_id'].iloc[ilens], text))
 
@@ -45,16 +45,17 @@ def get_lens_id(post, brand_def):
   return lens_ids
 
 if __name__ == "__main__":
-  activities = {'landscape'} #,'wildlife','portraits','low_light'}
-
-  outfile = open(f'data/usage.csv','w')
-  writer = csv.writer(outfile)
-  writer.writerow(('usage', 'thread', 'lens_id', 'sentences'))
+  activities = {'landscape','wildlife','portraits','low_light'}
 
   for activity in activities:
     cprint(f'---------------------------------- Parsing reviews for {activity} ----------------------------------','green')
     files = glob.glob(os.environ.get('RAW_HTML')+f'/dprev/{activity}_thread_*.csv')
     print(f'Found {len(files)} files.')
+
+    outfile = open(f'data/usage_{activity}.csv','w')
+    writer = csv.writer(outfile)
+    writer.writerow(('usage', 'thread', 'lens_id', 'sentences'))
+
     for i, ifile in enumerate(files):
       thread_id = ifile.split('thread_')[-1].split('.csv')[0]
       # cols: 'thread_forum', 'thread_title', 'post_date', 'user','user_nposts','post_body'
@@ -64,7 +65,7 @@ if __name__ == "__main__":
       forum = df_posts['thread_forum'].iloc[0].lower()
       if forum=='Open Talk': # these are usually not about advice
         continue
-      print('Forum title:',forum)
+      # print('Forum title:',forum)
 
       # check for default brand name
       brand_def = ''
@@ -78,9 +79,7 @@ if __name__ == "__main__":
         for match in matches:
           writer.writerow((activity, thread_id, match[0], match[1]))
 
-      if i>0: break
-
-  outfile.close()
+    outfile.close()
 
 
 

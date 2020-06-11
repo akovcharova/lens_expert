@@ -36,7 +36,7 @@ fields = [
   'announce_date'
 ]
 
-sql_query = """SELECT * FROM lens_specs"""
+sql_query = """SELECT * FROM specs_clean"""
 
 con = None
 con = psycopg2.connect(database='lens_db', user='ana', host='localhost', password='nonsense')
@@ -128,8 +128,8 @@ for ifile, file in enumerate(files):
         continue
 
       slim_df = df[df['brand']==brand]
+      ilens = utils.match_lens(slim_df, item)
       if (ilens!=-1):
-        ilens = utils.match_lens(item, slim_df)
         save_lens(slim_df, ilens)
       else:
         continue
@@ -155,8 +155,8 @@ for ifile, file in enumerate(files):
       # if we made it here, save item for analysis
       df_rows.append(irow)
 
-  if debug and ifile>1000: 
-    break
+  # if ifile>1000: 
+  #   break
 
 
 df = pd.DataFrame(df_rows)
