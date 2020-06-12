@@ -11,19 +11,88 @@
     <!-- Custom styles for this template -->
     <link href="../static/css/bootstrap.min.css" rel="stylesheet">
 
-    <title>Lens Tips</title>
-  </head>
-  <body>
-    <h1>Lenses to consider:</h1>
+    <div class="container">
 
-    <form action="/output" method="GET">
-      <div class="alert alert-warning alert-dismissible fade show" id="my_output" role="alert">
-        <strong>Output:</strong> {{my_output}}
-        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-          <span aria-hidden="true">&times;</span>
-        </button>
+  <!-- Page Heading -->
+  <h3 class="my-4">Top new lenses
+  </h3>
+
+  <div class="row" id="top_new" >
+    <div class="col-lg-4 col-sm-6 mb-4">
+      <div class="card h-100">
+        <a href="#"><img class="card-img-top" src="http://placehold.it/700x400" alt=""></a>
+        <div class="card-body">
+          <h6 class="card-title">
+            <a href="#">{{top_new[0]}}</a>
+          </h6>
+          <p class="card-text">Some specs</p>
+        </div>
       </div>
-    </form>
+    </div>
+    <div class="col-lg-4 col-sm-6 mb-4">
+      <div class="card h-100">
+        <a href="#"><img class="card-img-top" src="http://placehold.it/700x400" alt=""></a>
+        <div class="card-body">
+          <h6 class="card-title">
+            <a href="#">{{top_new[1]}}</a>
+          </h6>
+          <p class="card-text">Other specs</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4 col-sm-6 mb-4">
+      <div class="card h-100">
+        <a href="#"><img class="card-img-top" src="http://placehold.it/700x400" alt=""></a>
+        <div class="card-body">
+          <h6 class="card-title">
+            <a href="#">{{top_new[2]}}</a>
+          </h6>
+          <p class="card-text">Blah</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h3 class="my-4">Top used lenses
+  </h3>
+  <div class="row">
+    <div class="col-lg-4 col-sm-6 mb-4">
+      <div class="card h-100">
+        <a href="#"><img class="card-img-top" src="http://placehold.it/700x400" alt=""></a>
+        <div class="card-body">
+          <h6 class="card-title">
+            <a href="#">Project Four</a>
+          </h6>
+          <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4 col-sm-6 mb-4">
+      <div class="card h-100">
+        <a href="#"><img class="card-img-top" src="http://placehold.it/700x400" alt=""></a>
+        <div class="card-body">
+          <h6 class="card-title">
+            <a href="#">Project Five</a>
+          </h6>
+          <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nam viverra euismod odio, gravida pellentesque urna varius vitae.</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4 col-sm-6 mb-4">
+      <div class="card h-100">
+        <a href="#"><img class="card-img-top" src="http://placehold.it/700x400" alt=""></a>
+        <div class="card-body">
+          <h6 class="card-title">
+            <a href="#">Project Six</a>
+          </h6>
+          <p class="card-text">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Itaque earum nostrum suscipit ducimus nihil provident, perferendis rem illo, voluptate atque, sit eius in voluptates, nemo repellat fugiat excepturi! Nemo, esse.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- /.row -->
+
+</div>
 
     <!-- Optional JavaScript -->
     <!-- jQuery first, then Popper.js, then Bootstrap JS -->

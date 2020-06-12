@@ -1,6 +1,7 @@
 # avoid large files
 data/*
 __pycache__/
+flask_app/lens_app/__pycache__/
 notebooks/Untitled*
 
 # Misc.
