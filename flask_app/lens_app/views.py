@@ -13,14 +13,15 @@ lenses = pd.read_sql_query(sql_query,con)
 
 def get_top_attr(selected, usage, min_price, max_price, used):
   price_lbl = 'resale_price' if used else 'original_price'
-  total_score = selected[selected[usage+'_score']>10][usage+'_score'].sum()
-  print(total_score)
+  selected[usage+'_score'] = selected[usage+'_score'].apply(lambda x: 0 if x<5 else x)
+
   selected = lenses[(lenses[price_lbl]>min_price) & (lenses[price_lbl]<max_price)]
+  total_score = selected[usage+'_score'].sum()
   selected = selected.nlargest(3, usage+'_score')
 
   price_name = 'Expected price' if used else 'Original price'
-  img, name, price, ref, pop = [], [], [], [], []
-  for i in range(3):
+  img, name, price, value, ref, pop = [], [], [], [], [], []
+  for i in range(len(selected)):
     img.append(selected['image_href'].iloc[i])
     name.append(f"{selected['lens_id'].iloc[i].split('_')[0].capitalize()} ")
     if (selected['flen_max'].iloc[i]!=-1):
@@ -30,10 +31,11 @@ def get_top_attr(selected, usage, min_price, max_price, used):
     name[i] += f" f/{selected['f_min'].iloc[i]:.1f}"
 
     price.append(f"{price_name}: ${selected[price_lbl].iloc[i]:.2f}")
+    value.append(f"Expected retain value: {selected['resale_price'].iloc[i]/selected['original_price'].iloc[i]*100:.0f}%")
     pop.append(f"Popularity: {selected[usage+'_score'].iloc[i]/float(total_score)*100:.0f}%")
-    ref.append(f"https://www.dpreview.com/products/{selected['lens_id'].iloc[i].split('_')[0]}/lenses/{selected['lens_id'].iloc[i]}")
+    ref.append(f"https://www.dpreview.com/products/{selected['lens_id'].iloc[i].split('_')[0]}/lenses/{selected['lens_id'].iloc[i]}/specifications")
 
-  return img, name, price, pop, ref
+  return img, name, price, value, pop, ref
 
 @app.route('/')
 
@@ -41,16 +43,24 @@ def get_top_attr(selected, usage, min_price, max_price, used):
 def index():
     return render_template("index.html",)
 
-@app.route('/output', methods=['GET','POST'])
+@app.route('/output', methods=['POST'])
 def output():
 
   usage = request.form['usage']
+  if 'choose' in usage.lower():
+    return render_template("error.html", my_output='oops...Intended usage must be specified for optimal results. Please try again.')
+
   min_price = float(request.form['min_price'])
   max_price = float(request.form['max_price'])
+  if min_price>=max_price:
+    return render_template("error.html", my_output='oops...Minimum price must be smaller than maximum price. Please try again.')
 
-  new_img, new_name, new_price, new_pop, new_ref = get_top_attr(lenses, usage, min_price, max_price, used=False)
-  used_img, used_name, used_price, used_pop, used_ref = get_top_attr(lenses, usage, min_price, max_price, used=True)
+  new_img, new_name, new_price, new_value, new_pop, new_ref = get_top_attr(lenses, usage, min_price, max_price, used=False)
+  used_img, used_name, used_price, used_value, used_pop, used_ref = get_top_attr(lenses, usage, min_price, max_price, used=True)
 
-  return render_template("output.html", usage=usage.replace('_',' '), 
-                                        new_img=new_img, new_name=new_name, new_price=new_price, new_pop=new_pop,new_ref=new_ref,
-                                        used_img=used_img, used_name=used_name, used_price=used_price, used_pop=used_pop,used_ref=used_ref)
+  if len(new_img)<3 or len(used_img)<3:
+    return render_template("error.html", my_output='oops...Too few lenses in price range, please enter a wider range of values.')
+  else:
+    return render_template("output.html", usage=usage.replace('_',' '), 
+                                        new_img=new_img, new_name=new_name, new_price=new_price, new_value=new_value, new_pop=new_pop,new_ref=new_ref,
+                                        used_img=used_img, used_name=used_name, used_price=used_price, used_value=used_value, used_pop=used_pop,used_ref=used_ref)

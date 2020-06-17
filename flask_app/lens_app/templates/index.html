@@ -12,6 +12,14 @@
     <link href="../static/css/bootstrap.min.css" rel="stylesheet">
 
     <title>Welcome to Lens Expert!</title>
+
+     <style>
+      body {
+        background-image: url('./static/images/landscape.jpg');
+        background-size: cover;
+      }
+    </style> 
+
   </head>
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark static-top">
@@ -37,9 +45,9 @@
       </div>
     </nav>
 
-    <div class="container">
+    <div class="container" style="position: absolute; top: 40%; left: 35%; width: 500px; text-align: center; ">
 
-      <h1>Welcome to Lens Expert!</h1>
+      <h1 style="color:white;">Welcome to Lens Expert!</h1>
 
       <form action="/output" method="POST">
 
@@ -72,8 +80,9 @@
           </div>
           <input type="text" class="form-control" id="max_price" name="max_price" aria-label="Amount (to the nearest dollar)">
         </div>
-
+ 
         <input class="btn btn-primary" type="submit" value="Submit">
+
       </form>
     </div>
 

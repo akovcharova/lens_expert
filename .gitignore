@@ -3,6 +3,8 @@ data/*
 __pycache__/
 flask_app/lens_app/__pycache__/
 notebooks/Untitled*
+notebooks/*.jpg
+notebooks/*.jpeg
 
 # Misc.
 .DS_Store

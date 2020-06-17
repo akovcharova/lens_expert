@@ -64,6 +64,7 @@ specs = [
   # 'tripod_collar',
   # 'optional_accessories',
   # 'notes',
+  'image_href'                   # str
 ]
 
 
@@ -107,6 +108,8 @@ for ifile, file in enumerate(files):
     irow['announce_date'] = -1
   if do_subset and irow['announce_date']<2010: 
     continue
+
+  irow['image_href'] = bs.find('div',{'class':'productImage'})['style'].split('url(')[-1].split(')')[0]
 
   # parse spec sheet
   bs = BeautifulSoup(open(file.replace('_info','_spec')).read(), 'html.parser')
