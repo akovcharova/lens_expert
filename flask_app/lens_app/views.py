@@ -49,8 +49,16 @@ def output():
   if 'choose' in usage.lower():
     return render_template("error.html", my_output='oops...Intended usage must be specified for optimal results. Please try again.')
 
-  min_price = float(request.form['min_price'])
-  max_price = float(request.form['max_price'])
+  try:
+    min_price = float(request.form['min_price'])
+  except:
+    min_price = 0
+
+  try:
+    max_price = float(request.form['max_price'])
+  except:
+    max_price = 3000
+
   if min_price>=max_price:
     return render_template("error.html", my_output='oops...Minimum price must be smaller than maximum price. Please try again.')
 
