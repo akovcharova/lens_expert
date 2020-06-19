@@ -19,7 +19,6 @@ def get_top_attr(selected, usage, min_price, max_price, used):
   total_score = selected[usage+'_score'].sum()
   selected = selected.nlargest(3, usage+'_score')
 
-  price_name = 'Expected price' if used else 'Original price'
   img, name, price, value, ref, pop = [], [], [], [], [], []
   for i in range(len(selected)):
     img.append(selected['image_href'].iloc[i])
@@ -30,8 +29,8 @@ def get_top_attr(selected, usage, min_price, max_price, used):
       name[i] += f"{selected['flen_min'].iloc[i]:.0f} mm"
     name[i] += f" f/{selected['f_min'].iloc[i]:.1f}"
 
-    price.append(f"{price_name}: ${selected[price_lbl].iloc[i]:.2f}")
-    value.append(f"Expected retain value: {selected['resale_price'].iloc[i]/selected['original_price'].iloc[i]*100:.0f}%")
+    price.append(f"Original price: ${selected['original_price'].iloc[i]:.0f}")
+    value.append(f"Expected resale value: ${selected['resale_price'].iloc[i]:.0f}")
     pop.append(f"Popularity: {selected[usage+'_score'].iloc[i]/float(total_score)*100:.0f}%")
     ref.append(f"https://www.dpreview.com/products/{selected['lens_id'].iloc[i].split('_')[0]}/lenses/{selected['lens_id'].iloc[i]}/specifications")
 
@@ -57,10 +56,11 @@ def output():
 
   new_img, new_name, new_price, new_value, new_pop, new_ref = get_top_attr(lenses, usage, min_price, max_price, used=False)
   used_img, used_name, used_price, used_value, used_pop, used_ref = get_top_attr(lenses, usage, min_price, max_price, used=True)
+  usage = usage.replace('_',' ').rstrip('s')
 
   if len(new_img)<3 or len(used_img)<3:
     return render_template("error.html", my_output='oops...Too few lenses in price range, please enter a wider range of values.')
   else:
-    return render_template("output.html", usage=usage.replace('_',' '), 
+    return render_template("output.html", usage=usage, min_price=f"{min_price:.0f}", max_price=f"{max_price:.0f}", 
                                         new_img=new_img, new_name=new_name, new_price=new_price, new_value=new_value, new_pop=new_pop,new_ref=new_ref,
                                         used_img=used_img, used_name=used_name, used_price=used_price, used_value=used_value, used_pop=used_pop,used_ref=used_ref)
