@@ -42,6 +42,10 @@ def get_top_attr(selected, usage, min_price, max_price, used):
 def index():
     return render_template("index.html",)
 
+@app.route('/about', methods=['GET'])
+def about():
+    return render_template("about.html",)
+
 @app.route('/output', methods=['POST'])
 def output():
 
